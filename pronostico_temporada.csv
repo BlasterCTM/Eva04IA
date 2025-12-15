@@ -1,0 +1,5 @@
+Temporada,unidades_reales,unidades_modelo,unidades_historicas,mae_modelo,mse_modelo,mae_historico,mse_historico,tasa_agotamiento_real,tasa_agotamiento_modelo,tasa_agotamiento_historico,rmse_modelo,rmse_historico
+Autumn,516581,517874.88,536522.52,7.28,72.44,8.48,104.06,0.0,0.01,0.04,8.51,10.2
+Spring,491640,491306.16,509563.93,7.23,71.52,8.33,99.25,0.0,0.01,0.04,8.46,9.96
+Summer,492453,492560.9,510818.92,7.28,72.77,8.34,100.65,0.0,0.01,0.03,8.53,10.03
+Winter,509502,509832.8,528201.05,7.15,70.22,8.29,99.01,0.0,0.01,0.03,8.38,9.95

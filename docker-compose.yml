@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  eva02_app:
+    build: .
+    image: eva02ialsd:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - API_KEY=${API_KEY:-testkey}
+      - MODEL_PATH=/app/models/modelo_demanda_v1.joblib
+    volumes:
+      - ./outputs:/app/outputs:ro
+      - ./models:/app/models:ro
+    command: uvicorn src.serving.api:app --host 0.0.0.0 --port 8000
+    restart: unless-stopped

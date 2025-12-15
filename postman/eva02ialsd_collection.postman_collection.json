@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "EVA02IALSD - Minimal API",
+    "_postman_id": "a1b2c3d4-eva02-ialsd-0000-000000000000",
+    "description": "Colección para probar la API mínima (predict, health, reports, retrain, metrics)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "api_key", "value": "testkey" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [ "{{base_url}}" ],
+          "path": [ "health" ]
+        }
+      }
+    },
+    {
+      "name": "Predict",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-API-KEY", "value": "{{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"records\": [\n    {\n      \"Date\": \"2022-01-01\",\n      \"Store ID\": \"S001\",\n      \"Product ID\": \"P0001\",\n      \"Category\": \"Groceries\",\n      \"Region\": \"North\",\n      \"Weather Condition\": \"Sunny\",\n      \"Holiday/Promotion\": 0,\n      \"Seasonality\": \"Summer\",\n      \"Inventory Level\": 100,\n      \"Units Ordered\": 10,\n      \"Demand Forecast\": 90.0,\n      \"Price\": 9.99,\n      \"Discount\": 0,\n      \"Competitor Pricing\": 9.5\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/predict",
+          "host": [ "{{base_url}}" ],
+          "path": [ "predict" ]
+        }
+      }
+    },
+    {
+      "name": "Model Version",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/model/version",
+          "host": [ "{{base_url}}" ],
+          "path": [ "model", "version" ]
+        }
+      }
+    },
+    {
+      "name": "Reports Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/reports/detail?rows=1",
+          "host": [ "{{base_url}}" ],
+          "path": [ "reports", "detail" ],
+          "query": [ { "key": "rows", "value": "1" } ]
+        }
+      }
+    },
+    {
+      "name": "Reports Season",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/reports/season",
+          "host": [ "{{base_url}}" ],
+          "path": [ "reports", "season" ]
+        }
+      }
+    },
+    {
+      "name": "List Plots",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/plots",
+          "host": [ "{{base_url}}" ],
+          "path": [ "plots" ]
+        }
+      }
+    },
+    {
+      "name": "Retrain",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "X-API-KEY", "value": "{{api_key}}" } ],
+        "url": {
+          "raw": "{{base_url}}/retrain",
+          "host": [ "{{base_url}}" ],
+          "path": [ "retrain" ]
+        }
+      }
+    },
+    {
+      "name": "Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics",
+          "host": [ "{{base_url}}" ],
+          "path": [ "metrics" ]
+        }
+      }
+    }
+  ]
+}
