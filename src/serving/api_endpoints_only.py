@@ -155,7 +155,21 @@ def _ensure_expected_columns(df: pd.DataFrame, model: Any) -> pd.DataFrame:
 
 # Base data directory (project-root relative). Useful when the server
 # is started from a different working directory (e.g., inside Docker).
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+def _find_project_root() -> Path:
+    # Prefer current working directory (Docker sets WORKDIR=/app),
+    # otherwise climb from this file's location looking for markers.
+    cwd = Path.cwd()
+    if (cwd / "outputs").exists() or (cwd / "src").exists():
+        return cwd
+    p = Path(__file__).resolve()
+    for parent in p.parents:
+        if (parent / "outputs").exists() or (parent / "src").exists() or (parent / "requirements.txt").exists():
+            return parent
+    # Fallback to the file's grandparent (best-effort)
+    return p.parents[2]
+
+
+PROJECT_ROOT = _find_project_root()
 
 def _select_data_dir() -> Path:
     # Try several candidate locations for outputs/data to be tolerant
@@ -175,6 +189,7 @@ def _select_data_dir() -> Path:
     fallback = PROJECT_ROOT / "outputs" / "data"
     logger.warning(f"No existing data dir found; defaulting to {fallback}")
     return fallback
+
 
 DATA_DIR = _select_data_dir()
 
