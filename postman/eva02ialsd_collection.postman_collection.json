@@ -1,117 +1,142 @@
 {
   "info": {
-    "name": "EVA02IALSD - Minimal API",
-    "_postman_id": "a1b2c3d4-eva02-ialsd-0000-000000000000",
-    "description": "Colección para probar la API mínima (predict, health, reports, retrain, metrics)",
+    "name": "EVA02IALSD - API Minimal",
+    "_postman_id": "e0f6a6c6-0000-4000-8000-000000000000",
+    "description": "Colección para probar endpoints de la API (versionado de modelo, predict, reports, plots, retrain).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:8000" },
-    { "key": "api_key", "value": "testkey" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "api_key",
+      "value": "testkey"
+    },
+    {
+      "key": "activate_version",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Añade header x-api-key a cada request si la variable 'api_key' está definida",
+          "if (pm && pm.variables && pm.variables.get('api_key')) {",
+          "  var k = 'x-api-key';",
+          "  var v = pm.variables.get('api_key');",
+          "  try { pm.request.headers.upsert({ key: k, value: v }); } catch (e) { pm.request.headers.add({ key: k, value: v }); }",
+          "}"
+        ]
+      }
+    }
   ],
   "item": [
+    {
+      "name": "Root",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/",
+          "host": ["{{base_url}}"],
+          "path": ["/"]
+        }
+      }
+    },
     {
       "name": "Health",
       "request": {
         "method": "GET",
         "header": [],
-        "url": {
-          "raw": "{{base_url}}/health",
-          "host": [ "{{base_url}}" ],
-          "path": [ "health" ]
-        }
+        "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
       }
     },
     {
-      "name": "Predict",
+      "name": "Model - Registry (versions)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/model/versions", "host": ["{{base_url}}"], "path": ["model","versions"] }
+      }
+    },
+    {
+      "name": "Model - Metadata (legacy)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/model/version", "host": ["{{base_url}}"], "path": ["model","version"] }
+      }
+    },
+    {
+      "name": "Model - Activate",
       "request": {
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "X-API-KEY", "value": "{{api_key}}" }
+          { "key": "x-api-key", "value": "{{api_key}}" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"records\": [\n    {\n      \"Date\": \"2022-01-01\",\n      \"Store ID\": \"S001\",\n      \"Product ID\": \"P0001\",\n      \"Category\": \"Groceries\",\n      \"Region\": \"North\",\n      \"Weather Condition\": \"Sunny\",\n      \"Holiday/Promotion\": 0,\n      \"Seasonality\": \"Summer\",\n      \"Inventory Level\": 100,\n      \"Units Ordered\": 10,\n      \"Demand Forecast\": 90.0,\n      \"Price\": 9.99,\n      \"Discount\": 0,\n      \"Competitor Pricing\": 9.5\n    }\n  ]\n}"
+          "raw": "{\n  \"version\": \"{{activate_version}}\"\n}"
         },
-        "url": {
-          "raw": "{{base_url}}/predict",
-          "host": [ "{{base_url}}" ],
-          "path": [ "predict" ]
-        }
+        "url": { "raw": "{{base_url}}/model/activate", "host": ["{{base_url}}"], "path": ["model","activate"] }
       }
     },
     {
-      "name": "Model Version",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/model/version",
-          "host": [ "{{base_url}}" ],
-          "path": [ "model", "version" ]
-        }
-      }
-    },
-    {
-      "name": "Reports Detail",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/reports/detail?rows=1",
-          "host": [ "{{base_url}}" ],
-          "path": [ "reports", "detail" ],
-          "query": [ { "key": "rows", "value": "1" } ]
-        }
-      }
-    },
-    {
-      "name": "Reports Season",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/reports/season",
-          "host": [ "{{base_url}}" ],
-          "path": [ "reports", "season" ]
-        }
-      }
-    },
-    {
-      "name": "List Plots",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/plots",
-          "host": [ "{{base_url}}" ],
-          "path": [ "plots" ]
-        }
-      }
-    },
-    {
-      "name": "Retrain",
+      "name": "Model - Reload",
       "request": {
         "method": "POST",
-        "header": [ { "key": "X-API-KEY", "value": "{{api_key}}" } ],
-        "url": {
-          "raw": "{{base_url}}/retrain",
-          "host": [ "{{base_url}}" ],
-          "path": [ "retrain" ]
-        }
+        "header": [ { "key": "x-api-key", "value": "{{api_key}}" } ],
+        "url": { "raw": "{{base_url}}/model/reload", "host": ["{{base_url}}"], "path": ["model","reload"] }
       }
     },
     {
-      "name": "Metrics",
+      "name": "Predict - sample",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" }, { "key": "x-api-key", "value": "{{api_key}}" } ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"records\": [\n    {\n      \"Date\": \"2025-12-16\",\n      \"Units Sold\": 10,\n      \"Product\": \"SKU123\",\n      \"Store\": \"S1\"\n    }\n  ]\n}"
+        },
+        "url": { "raw": "{{base_url}}/predict", "host": ["{{base_url}}"], "path": ["predict"] }
+      }
+    },
+    {
+      "name": "Reports - Detail",
       "request": {
         "method": "GET",
         "header": [],
-        "url": {
-          "raw": "{{base_url}}/metrics",
-          "host": [ "{{base_url}}" ],
-          "path": [ "metrics" ]
-        }
+        "url": { "raw": "{{base_url}}/reports/detail?rows=10", "host": ["{{base_url}}"], "path": ["reports","detail"], "query": [ { "key": "rows", "value": "10" } ] }
+      }
+    },
+    {
+      "name": "Reports - Season",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/reports/season", "host": ["{{base_url}}"], "path": ["reports","season"] }
+      }
+    },
+    {
+      "name": "Plots - List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{base_url}}/plots", "host": ["{{base_url}}"], "path": ["plots"] }
+      }
+    },
+    {
+      "name": "Retrain (background)",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "x-api-key", "value": "{{api_key}}" } ],
+        "url": { "raw": "{{base_url}}/retrain", "host": ["{{base_url}}"], "path": ["retrain"] }
       }
     }
   ]

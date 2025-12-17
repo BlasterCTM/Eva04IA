@@ -1,14 +1,15 @@
 services:
-  eva02_app:
-    build: .
-    image: eva02ialsd:latest
+  eva04_app:
+    image: eva04:latest
     ports:
       - "8000:8000"
     environment:
       - API_KEY=${API_KEY:-testkey}
       - MODEL_PATH=/app/models/modelo_demanda_v1.joblib
+      - METADATA_PATH=/app/models/metadata.json
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     volumes:
-      - ./outputs:/app/outputs:ro
-      - ./models:/app/models:ro
-    command: uvicorn src.serving.api:app --host 0.0.0.0 --port 8000
+      - ./outputs:/app/outputs:rw
+      - ./models:/app/models:rw
+    command: uvicorn src.serving.api_endpoints_only:app --host 0.0.0.0 --port 8000
     restart: unless-stopped

@@ -39,7 +39,7 @@ except Exception:
 
 from src.ingenieria_caracteristicas import agregar_caracteristicas
 
-
+# Paths (may be resolved relative to PROJECT_ROOT later)
 MODEL_PATH = Path(os.getenv("MODEL_PATH", "models/modelo_demanda_v1.joblib"))
 METADATA_PATH = Path(os.getenv("METADATA_PATH", "models/metadata.json"))
 API_KEY = os.getenv("API_KEY", "")
@@ -90,19 +90,9 @@ else:
     PREDICT_TIME = _NoopMetric()
 
 
-def load_model() -> Any | None:
-    if MODEL_PATH.exists():
-        try:
-            logger.info(f"Cargando modelo desde {MODEL_PATH}")
-            return joblib.load(MODEL_PATH)
-        except Exception:
-            logger.exception("Error cargando modelo")
-            return None
-    logger.warning(f"Modelo no encontrado en {MODEL_PATH}")
-    return None
-
-
-MODEL = load_model()
+# MODEL will be loaded after PROJECT_ROOT is computed so paths
+# can be resolved relative to the project root.
+MODEL: Any | None = None
 
 
 class PredictionRequest(BaseModel):
@@ -194,11 +184,105 @@ def _select_data_dir() -> Path:
 DATA_DIR = _select_data_dir()
 
 
-def require_api_key(x_api_key: Optional[str] = Header(None)) -> bool:
-    if API_KEY:
-        if x_api_key != API_KEY:
-            raise HTTPException(status_code=401, detail="Invalid API Key")
-    return True
+def require_api_key(
+    x_api_key: Optional[str] = Header(None),
+    authorization: Optional[str] = Header(None),
+    api_key: Optional[str] = None,
+) -> bool:
+    """Check API key from multiple sources:
+    - `x-api-key` header
+    - `Authorization: Bearer <key>` header
+    - `api_key` query parameter
+
+    If `API_KEY` env var is empty, authentication is disabled.
+    """
+    if not API_KEY:
+        return True
+
+    candidates: List[Optional[str]] = [x_api_key, api_key]
+    if authorization:
+        try:
+            if authorization.lower().startswith("bearer "):
+                candidates.append(authorization.split(" ", 1)[1].strip())
+            else:
+                candidates.append(authorization.strip())
+        except Exception:
+            candidates.append(authorization)
+
+    for val in candidates:
+        if val and val == API_KEY:
+            return True
+
+    raise HTTPException(status_code=401, detail="Invalid API Key")
+
+
+# --- Model loading and versioning helpers (use metadata.json if present) ---
+def _resolve_model_paths() -> None:
+    global MODEL_PATH, METADATA_PATH
+    if not MODEL_PATH.is_absolute():
+        MODEL_PATH = PROJECT_ROOT / MODEL_PATH
+    if not METADATA_PATH.is_absolute():
+        METADATA_PATH = PROJECT_ROOT / METADATA_PATH
+
+
+def _load_registry() -> dict:
+    if not METADATA_PATH.exists():
+        return {"versions": [], "current": None}
+    try:
+        with open(METADATA_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        logger.exception("Error leyendo metadata.json")
+        return {"versions": [], "current": None}
+
+
+def _save_registry(registry: dict) -> None:
+    try:
+        with open(METADATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(registry, f, indent=2, ensure_ascii=False)
+    except Exception:
+        logger.exception("Error escribiendo metadata.json")
+
+
+def _load_model_from_registry() -> Any | None:
+    # Prefer the registry 'current' entry if available
+    registry = _load_registry()
+    current = registry.get("current")
+    if current:
+        for v in registry.get("versions", []):
+            if v.get("version") == current:
+                model_path = Path(v.get("model_path"))
+                if not model_path.is_absolute():
+                    model_path = PROJECT_ROOT / model_path
+                if model_path.exists():
+                    try:
+                        logger.info(f"Cargando modelo desde registry: {model_path}")
+                        return joblib.load(model_path)
+                    except Exception:
+                        logger.exception("Error cargando modelo desde registry path")
+                        return None
+                else:
+                    logger.warning(f"Modelo referido por registry no existe: {model_path}")
+    # Fallback to legacy MODEL_PATH
+    if MODEL_PATH.exists():
+        try:
+            logger.info(f"Cargando modelo fallback desde {MODEL_PATH}")
+            return joblib.load(MODEL_PATH)
+        except Exception:
+            logger.exception("Error cargando modelo fallback")
+    logger.warning("No se encontró ningún modelo para cargar")
+    return None
+
+
+def reload_model() -> Any | None:
+    global MODEL
+    _resolve_model_paths()
+    MODEL = _load_model_from_registry()
+    return MODEL
+
+
+# Inicializar carga del modelo al arrancar la app
+reload_model()
 
 
 @app.post("/predict")
@@ -219,6 +303,44 @@ def predict(request: PredictionRequest, _=Depends(require_api_key)):
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     if "Units Sold" not in df.columns:
         df["Units Sold"] = 0
+    # Normalize common column name variants to what the feature engineering expects
+    def _normalize_input_columns(df: pd.DataFrame) -> pd.DataFrame:
+        mapping = {
+            # store / product identifiers
+            "Store": "Store ID",
+            "store": "Store ID",
+            "StoreID": "Store ID",
+            "store_id": "Store ID",
+            "Store Id": "Store ID",
+            "Product": "Product ID",
+            "product": "Product ID",
+            "ProductID": "Product ID",
+            "product_id": "Product ID",
+            # units
+            "Units": "Units Sold",
+            "UnitsSold": "Units Sold",
+            "Units_Sold": "Units Sold",
+            "units_sold": "Units Sold",
+            "units": "Units Sold",
+        }
+        # Rename columns if synonyms present
+        rename_map = {k: v for k, v in mapping.items() if k in df.columns and v not in df.columns}
+        if rename_map:
+            try:
+                df = df.rename(columns=rename_map)
+                logger.debug(f"Normalized input columns: {rename_map}")
+            except Exception:
+                logger.exception("Error renombrando columnas de entrada")
+        # Ensure required columns exist with defaults
+        if "Units Sold" not in df.columns:
+            df["Units Sold"] = 0
+        if "Store ID" not in df.columns:
+            df["Store ID"] = "UNKNOWN"
+        if "Product ID" not in df.columns:
+            df["Product ID"] = "UNKNOWN"
+        return df
+
+    df = _normalize_input_columns(df)
     df = agregar_caracteristicas(df)
     df = _ensure_expected_columns(df, MODEL)
     try:
@@ -237,6 +359,41 @@ def model_version() -> Dict[str, Any]:
         raise HTTPException(status_code=404, detail="metadata not found")
     with open(METADATA_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+@app.get("/model/versions")
+def model_versions() -> Dict[str, Any]:
+    # Devuelve el registry completo (versions + current)
+    registry = _load_registry()
+    return registry
+
+
+class ActivateRequest(BaseModel):
+    version: str
+
+
+@app.post("/model/activate")
+def model_activate(req: ActivateRequest, _=Depends(require_api_key)) -> Dict[str, Any]:
+    registry = _load_registry()
+    versions = registry.get("versions", [])
+    match = next((v for v in versions if v.get("version") == req.version), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="version not found")
+    registry["current"] = req.version
+    _save_registry(registry)
+    # Try to reload model into memory
+    m = reload_model()
+    if m is None:
+        raise HTTPException(status_code=500, detail="failed to load requested model")
+    return {"status": "activated", "version": req.version}
+
+
+@app.post("/model/reload")
+def model_reload(_=Depends(require_api_key)) -> Dict[str, Any]:
+    m = reload_model()
+    if m is None:
+        raise HTTPException(status_code=500, detail="no model loaded after reload")
+    return {"status": "reloaded", "model_loaded": True}
 
 
 @app.get("/reports/detail")
@@ -269,6 +426,21 @@ def list_plots() -> Dict[str, Any]:
         return {"plots": []}
     items = [p.as_posix() for p in base.rglob("*.png")]
     return {"plots": items}
+
+
+@app.get("/debug/info")
+def debug_info(_=Depends(require_api_key)) -> Dict[str, Any]:
+    """Devuelve información útil para depuración: paths calculados y estado del registry."""
+    registry = _load_registry()
+    return {
+        "project_root": str(PROJECT_ROOT),
+        "data_dir": str(DATA_DIR),
+        "model_path": str(MODEL_PATH),
+        "metadata_path": str(METADATA_PATH),
+        "registry_current": registry.get("current"),
+        "registry_versions_count": len(registry.get("versions", [])),
+        "model_loaded": MODEL is not None,
+    }
 
 
 def _run_retrain_subprocess():
