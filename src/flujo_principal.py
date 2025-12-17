@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .interfaz_graficos import mostrar_interfaz_graficos
+
 from .dashboard_logica import (
     generar_kpis_resumen,
     generar_lista_riesgo_quiebre,
@@ -36,6 +36,10 @@ def ejecutar_pipeline(
 ) -> tuple[object, dict]:
     """Ejecuta el flujo completo de generacion de KPIs y pronostico."""
     data_path = data_path or Path("data/retail_store_inventory.csv")
+
+    # Importar solo si se requiere interfaz gráfica
+    if mostrar_graficos or abrir_interfaz:
+        from .interfaz_graficos import mostrar_interfaz_graficos
 
     raw_df = cargar_y_explorar(data_path)
     clean_df = limpiar_datos(raw_df)

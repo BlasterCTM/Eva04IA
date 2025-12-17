@@ -13,6 +13,14 @@ def _asegurar_directorio(ruta: Path) -> None:
     """Crea el directorio padre si no existe."""
     ruta.parent.mkdir(parents=True, exist_ok=True)
 
+def asegurar_subdirectorios_plots():
+    base = Path("outputs/plots")
+    carpetas = ["1_Precision", "2_DII", "3_OOS", "4_Sobrestock", "dashboard"]
+    for sub in carpetas:
+        d = base / sub
+        d.mkdir(parents=True, exist_ok=True)
+
+asegurar_subdirectorios_plots()
 
 def generar_kpis_linea_base(
     df: pd.DataFrame,
