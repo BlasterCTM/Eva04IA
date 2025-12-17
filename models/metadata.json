@@ -15,7 +15,25 @@
         "rmse": 8.47008185805361
       },
       "model_path": "models/modelo_demanda_v20251217005002.joblib"
+    },
+    {
+      "version": "v20251217035334",
+      "saved_at": "2025-12-17T03:53:36.117130Z",
+      "metrics": {
+        "mae": 7.224339962005615,
+        "rmse": 8.452346060749292
+      },
+      "model_path": "models/modelo_demanda_v20251217035334.joblib"
+    },
+    {
+      "version": "v20251217040026",
+      "saved_at": "2025-12-17T04:00:26.399212Z",
+      "metrics": {
+        "mae": 7.224339962005615,
+        "rmse": 8.452346060749292
+      },
+      "model_path": "models/modelo_demanda_v20251217040026.joblib"
     }
   ],
-  "current": "v20251217005002"
+  "current": "v20251217040026"
 }

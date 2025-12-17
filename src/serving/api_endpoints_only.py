@@ -447,7 +447,7 @@ def _run_retrain_subprocess():
     try:
         logger.info("Lanzando proceso de reentrenamiento")
         # Ejecuta script de entrenamiento en un proceso separado
-        subprocess.Popen([sys.executable, "-m", "src.train.save_model"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen([sys.executable, "-m", "src.train.save_model"])
     except Exception:
         logger.exception("retrain subprocess failed")
 
